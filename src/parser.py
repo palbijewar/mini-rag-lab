@@ -1,4 +1,5 @@
 from pypdf import PdfReader
+from cleaner import clean_text
 
 
 def parse_pdf(file_path: str):
@@ -7,23 +8,29 @@ def parse_pdf(file_path: str):
     pages = []
 
     for page_number, page in enumerate(reader.pages):
-        text = page.extract_text()
+
+        raw_text = page.extract_text()
+
+        cleaned_text = clean_text(raw_text)
 
         pages.append({
             "page_number": page_number + 1,
-            "text": text
+            "text": cleaned_text
         })
 
     return pages
 
 
 if __name__ == "__main__":
+
     pages = parse_pdf("data/demopdf.pdf")
 
-    print(f"Total pages: {len(pages)}")
+    print(f"\nTotal pages: {len(pages)}")
 
     for page in pages[:2]:
+
         print("\n" + "=" * 80)
         print(f"PAGE {page['page_number']}")
         print("=" * 80)
+
         print(page["text"][:1000])

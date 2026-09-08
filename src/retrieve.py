@@ -1,6 +1,7 @@
 from embeddings import create_embedding
 from pinecone_client import index
 from context_builder import build_context
+from prompt import build_prompt
 
 
 def retrieve(query: str, top_k: int = 5):
@@ -25,13 +26,15 @@ if __name__ == "__main__":
         top_k=5
     )
 
-    print("\nQUERY:")
-    print(query)
-
     context = build_context(results)
 
+    prompt = build_prompt(
+        context=context,
+        question=query
+    )
+
     print("\n" + "=" * 80)
-    print("RETRIEVED CONTEXT")
+    print("PROMPT THAT WILL BE SENT TO THE LLM")
     print("=" * 80)
 
-    print(context)
+    print(prompt)

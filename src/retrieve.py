@@ -2,6 +2,7 @@ from embeddings import create_embedding
 from pinecone_client import index
 from context_builder import build_context
 from prompt import build_prompt
+from llm import generate_answer
 
 
 def retrieve(query: str, top_k: int = 5):
@@ -21,20 +22,38 @@ if __name__ == "__main__":
 
     query = "What are the most important data structures for SDE interviews?"
 
+    # -----------------------------
+    # RETRIEVAL
+    # -----------------------------
+
     results = retrieve(
         query=query,
         top_k=5
     )
 
+    # -----------------------------
+    # BUILD CONTEXT
+    # -----------------------------
+
     context = build_context(results)
+
+    # -----------------------------
+    # BUILD PROMPT
+    # -----------------------------
 
     prompt = build_prompt(
         context=context,
         question=query
     )
 
+    # -----------------------------
+    # GENERATE ANSWER
+    # -----------------------------
+
+    answer = generate_answer(prompt)
+
     print("\n" + "=" * 80)
-    print("PROMPT THAT WILL BE SENT TO THE LLM")
+    print("FINAL ANSWER")
     print("=" * 80)
 
-    print(prompt)
+    print(answer)

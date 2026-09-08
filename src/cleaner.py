@@ -2,14 +2,35 @@ import re
 
 
 def clean_text(text: str) -> str:
-    # Replace multiple spaces with one space
-    text = re.sub(r"\s+", " ", text)
 
-    # Remove leading/trailing spaces
-    text = text.strip()
+    # Fix missing spaces after punctuation
+    text = re.sub(r"([;,:])([A-Za-z])", r"\1 \2", text)
 
-    return text
+    # Fix common PDF heading/word concatenation
+    replacements = {
+        "OverviewWelcome": "Overview\nWelcome",
+        "DataStructures": "Data Structures",
+        "ProgrammingLanguages": "Programming Languages",
+        "Behavioraland": "Behavioral and",
+        "SystemArchitecture": "System Architecture",
+        "Problem-solvingand": "Problem-solving and",
+        "Domainsand": "Domains and",
+    }
 
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    # Normalize spaces within each line
+    lines = []
+
+    for line in text.splitlines():
+        line = re.sub(r"[ \t]+", " ", line)
+        line = line.strip()
+
+        if line:
+            lines.append(line)
+
+    return "\n".join(lines)
 if __name__ == "__main__":
 
     raw_text = """

@@ -1,5 +1,5 @@
 from parser import parse_pdf
-
+from cleaner import clean_text
 
 def fixed_size_chunking(
     text: str,
@@ -70,7 +70,7 @@ def chunk_document(
     for page in pages:
 
         page_number = page["page_number"]
-        text = page["text"]
+        text = clean_text(page["text"])
 
         # Select chunking method
         if method == "fixed":
@@ -90,10 +90,11 @@ def chunk_document(
 
         elif method == "recursive":
 
-            page_chunks = recursive_chunking(
-                text=text,
-                chunk_size=chunk_size
-            )
+         page_chunks = recursive_chunk(
+        text=text,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
+    )
 
         else:
             raise ValueError(
@@ -113,78 +114,63 @@ def chunk_document(
 
     return document_chunks
 
-def recursive_chunking(
-    text: str,
-    chunk_size: int = 500,
-    separators=None
-):
-    if separators is None:
-        separators = [
-            "\n\n",  # paragraph
-            "\n",    # line
-            ". ",    # sentence
-            " ",     # word
-            ""       # character fallback
-        ]
-
-    # Base case: text already fits
-    if len(text) <= chunk_size:
-        return [text.strip()]
-
-    separator = separators[0]
-    remaining_separators = separators[1:]
-
-    # Final fallback: character splitting
-    if separator == "":
-        return [
-            text[i:i + chunk_size]
-            for i in range(0, len(text), chunk_size)
-        ]
-
-    parts = text.split(separator)
+def recursive_chunk(text, chunk_size=500, chunk_overlap=100):
+    separators = [
+    "\n\n",
+    "\n",
+    ". ",
+    " "
+]
 
     chunks = []
-    current_chunk = ""
 
-    for part in parts:
+    def split_text(text, separators):
+        if len(text) <= chunk_size:
+            return [text]
 
-        if not part.strip():
-            continue
+        separator = separators[0]
+        remaining_separators = separators[1:]
 
-        # Add separator back while joining
-        if current_chunk:
-            candidate = current_chunk + separator + part
-        else:
-            candidate = part
+        parts = text.split(separator)
 
-        # Candidate fits inside chunk size
-        if len(candidate) <= chunk_size:
-            current_chunk = candidate
+        result = []
+        current = ""
 
-        else:
-            # Save the current chunk first
-            if current_chunk:
-                chunks.append(current_chunk.strip())
+        for part in parts:
+            candidate = current + separator + part if current else part
 
-            # This single part is still too big,
-            # so recursively split it with smaller separators
-            if len(part) > chunk_size:
-
-                smaller_chunks = recursive_chunking(
-                    part,
-                    chunk_size,
-                    remaining_separators
-                )
-
-                chunks.extend(smaller_chunks)
-                current_chunk = ""
-
+            if len(candidate) <= chunk_size:
+                current = candidate
             else:
-                current_chunk = part
+                if current:
+                    result.append(current)
 
-    # Add the remaining chunk
-    if current_chunk:
-        chunks.append(current_chunk.strip())
+                current = part
+
+        if current:
+            result.append(current)
+
+        final_chunks = []
+
+        for chunk in result:
+            if len(chunk) > chunk_size and remaining_separators:
+                final_chunks.extend(
+                    split_text(chunk, remaining_separators)
+                )
+            else:
+                final_chunks.append(chunk)
+
+        return final_chunks
+
+    raw_chunks = split_text(text, separators)
+
+    for i, chunk in enumerate(raw_chunks):
+        if i == 0:
+            chunks.append(chunk)
+        else:
+            previous = raw_chunks[i - 1]
+            overlap = previous[-chunk_overlap:]
+            chunks.append(overlap + " " + chunk)
 
     return chunks
 

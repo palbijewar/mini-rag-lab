@@ -1,22 +1,58 @@
 import re
 
 
+# Topics that are clearly meaningful boundaries
+SUBSECTIONS = [
+    "Arrays",
+    "Linked Lists",
+    "Stacks",
+    "Queues",
+    "Trees",
+    "Graphs",
+    "Hash Tables",
+
+    "Sorting Algorithms:",
+    "Searching Algorithms:",
+
+    "Dynamic Programming",
+    "Greedy Algorithms",
+    "Divide and Conquer",
+    "String Algorithms",
+
+    "Structural patterns",
+    "Design patterns",
+    "Object-oriented design principles",
+
+    "Relational databases (SQL)",
+    "NoSQL databases",
+    "Indexing",
+    "Transactions",
+    "ACID properties",
+
+    "Programming paradigms",
+    "Memory management",
+    "Concurrency",
+    "Asynchronous programming",
+    "Error handling",
+
+    "Client-server architecture",
+    "RESTful architecture",
+    "Service-Oriented Architecture (SOA)",
+    "Message Queuing",
+    "Microservices",
+    "Event-Driven Architecture (EDA)",
+    "Layered Architecture",
+
+    "Problem-solving strategies",
+    "Coding techniques",
+    "Coding best practices",
+    "Time and space complexity analysis",
+    "Debugging",
+    "Optimization",
+]
+
+
 def section_chunking(pages):
-    """
-    Split the document into meaningful subsection chunks.
-
-    Major sections:
-        1. Data Structures
-        2. Algorithms
-        ...
-
-    Within a major section, we also detect subsection headings such as:
-        Sorting Algorithms
-        Searching Algorithms
-        String Algorithms
-        Greedy Algorithms
-        Dynamic Programming
-    """
 
     full_text = "\n".join(
         page["text"]
@@ -24,18 +60,29 @@ def section_chunking(pages):
     )
 
     # --------------------------------------------------
-    # STEP 1: Find major sections
+    # STEP 1
+    # Find major sections
     # --------------------------------------------------
 
     major_pattern = r"(?m)^\s*(\d+)\.\s+(.+)$"
 
     major_matches = list(
-        re.finditer(major_pattern, full_text)
+        re.finditer(
+            major_pattern,
+            full_text
+        )
     )
 
-    chunks = []
+    final_chunks = []
 
-    for major_index, major_match in enumerate(major_matches):
+    # --------------------------------------------------
+    # STEP 2
+    # Process every major section
+    # --------------------------------------------------
+
+    for major_index, major_match in enumerate(
+        major_matches
+    ):
 
         major_number = major_match.group(1)
         major_name = major_match.group(2).strip()
@@ -43,7 +90,9 @@ def section_chunking(pages):
         major_start = major_match.start()
 
         if major_index + 1 < len(major_matches):
-            major_end = major_matches[major_index + 1].start()
+            major_end = major_matches[
+                major_index + 1
+            ].start()
         else:
             major_end = len(full_text)
 
@@ -52,68 +101,38 @@ def section_chunking(pages):
         ].strip()
 
         # --------------------------------------------------
-        # STEP 2: Find meaningful subsections
+        # STEP 3
+        # Find valid subsection headings
         # --------------------------------------------------
 
+        escaped_topics = [
+            re.escape(topic)
+            for topic in SUBSECTIONS
+        ]
+
         subsection_pattern = (
-            r"(?m)^\s*"
-            r"(Sorting Algorithms|"
-            r"Searching Algorithms|"
-            r"String Algorithms|"
-            r"Greedy Algorithms|"
-            r"Divide and Conquer|"
-            r"Dynamic Programming|"
-            r"Structural patterns|"
-            r"Design patterns|"
-            r"Behavioral patterns|"
-            r"Object-oriented design principles|"
-            r"Scalability|"
-            r"Distributed systems|"
-            r"Microservices architecture|"
-            r"Database design and optimization|"
-            r"Indexing|"
-            r"Transactions|"
-            r"ACID properties|"
-            r"NoSQL databases|"
-            r"Networking|"
-            r"Memory management|"
-            r"Concurrency|"
-            r"Asynchronous programming|"
-            r"Error handling|"
-            r"Functional programming|"
-            r"Object-oriented programming \(OOP\)|"
-            r"Design patterns|"
-            r"Client-server architecture|"
-            r"RESTful architecture|"
-            r"Service-Oriented Architecture \(SOA\)|"
-            r"Message Queuing|"
-            r"Microservices|"
-            r"Event-Driven Architecture \(EDA\)|"
-            r"Layered Architecture|"
-            r"Problem-solving strategies|"
-            r"Coding techniques|"
-            r"Coding best practices|"
-            r"Time and space complexity analysis|"
-            r"Debugging|"
-            r"Optimization)"
-            r"\s*$"
+            r"(?m)^\s*("
+            + "|".join(escaped_topics)
+            + r")\s*$"
         )
 
         subsection_matches = list(
             re.finditer(
                 subsection_pattern,
-                major_text
+                major_text,
+                re.IGNORECASE
             )
         )
 
         # --------------------------------------------------
-        # STEP 3: If no subsections exist,
-        # keep the major section as one chunk
+        # STEP 4
+        # If there are no useful subsections,
+        # keep the entire major section.
         # --------------------------------------------------
 
         if not subsection_matches:
 
-            chunks.append({
+            final_chunks.append({
                 "section": (
                     f"{major_number}. "
                     f"{major_name}"
@@ -124,10 +143,33 @@ def section_chunking(pages):
             continue
 
         # --------------------------------------------------
-        # STEP 4: Create subsection chunks
+        # STEP 5
+        # Keep content BEFORE the first subsection.
+        # This prevents data from being lost.
         # --------------------------------------------------
 
-        for subsection_index, subsection_match in enumerate(
+        prefix = major_text[
+            :subsection_matches[0].start()
+        ].strip()
+
+        if prefix:
+
+            final_chunks.append({
+                "section": (
+                    f"{major_number}. "
+                    f"{major_name}"
+                ),
+                "text": prefix
+            })
+
+        # --------------------------------------------------
+        # STEP 6
+        # Create subsection chunks
+        # --------------------------------------------------
+
+        subsection_chunks = []
+
+        for i, subsection_match in enumerate(
             subsection_matches
         ):
 
@@ -137,12 +179,9 @@ def section_chunking(pages):
 
             start = subsection_match.start()
 
-            if (
-                subsection_index + 1
-                < len(subsection_matches)
-            ):
+            if i + 1 < len(subsection_matches):
                 end = subsection_matches[
-                    subsection_index + 1
+                    i + 1
                 ].start()
             else:
                 end = len(major_text)
@@ -151,7 +190,7 @@ def section_chunking(pages):
                 start:end
             ].strip()
 
-            chunks.append({
+            subsection_chunks.append({
                 "section": (
                     f"{major_number}. "
                     f"{major_name} → "
@@ -160,17 +199,72 @@ def section_chunking(pages):
                 "text": subsection_text
             })
 
-    return chunks
+        # --------------------------------------------------
+        # STEP 7
+        # Don't create tiny chunks.
+        #
+        # If a subsection is smaller than 100 chars,
+        # merge it with the next subsection.
+        # --------------------------------------------------
+
+        merged_chunks = []
+
+        i = 0
+
+        while i < len(subsection_chunks):
+
+            current = subsection_chunks[i]
+
+            if (
+                len(current["text"]) < 100
+                and i + 1 < len(subsection_chunks)
+            ):
+
+                next_chunk = subsection_chunks[i + 1]
+
+                current["text"] += (
+                    "\n\n"
+                    + next_chunk["text"]
+                )
+
+                current["section"] += (
+                    " + "
+                    + next_chunk["section"].split(
+                        " → "
+                    )[-1]
+                )
+
+                i += 2
+
+            else:
+
+                merged_chunks.append(
+                    current
+                )
+
+                i += 1
+
+        final_chunks.extend(
+            merged_chunks
+        )
+
+    return final_chunks
 
 
-def chunk_document(pages, method="section"):
+def chunk_document(
+    pages,
+    method="section"
+):
 
     if method != "section":
+
         raise ValueError(
             "For now, use method='section'."
         )
 
-    section_chunks = section_chunking(pages)
+    section_chunks = section_chunking(
+        pages
+    )
 
     document_chunks = []
 
@@ -179,12 +273,24 @@ def chunk_document(pages, method="section"):
     ):
 
         document_chunks.append({
-            "id": f"section-{chunk_index}",
-            "text": chunk["text"],
-            "page_number": None,
-            "chunk_index": chunk_index,
-            "chunking_method": method,
-            "section": chunk["section"]
+
+            "id":
+                f"section-{chunk_index}",
+
+            "text":
+                chunk["text"],
+
+            "page_number":
+                None,
+
+            "chunk_index":
+                chunk_index,
+
+            "chunking_method":
+                method,
+
+            "section":
+                chunk["section"]
         })
 
     return document_chunks
@@ -211,6 +317,18 @@ if __name__ == "__main__":
         f"TOTAL CHUNKS: {len(chunks)}"
     )
 
+    print("\nCHUNK SIZES:")
+
+    for chunk in chunks:
+
+        print(
+            f"{chunk['id']} | "
+            f"{chunk['section']} | "
+            f"{len(chunk['text'])} characters"
+        )
+
+    print("\nCHUNK DETAILS:")
+
     for chunk in chunks:
 
         print("\n" + "=" * 80)
@@ -229,4 +347,6 @@ if __name__ == "__main__":
 
         print("=" * 80)
 
-        print(chunk["text"])
+        print(
+            chunk["text"]
+        )

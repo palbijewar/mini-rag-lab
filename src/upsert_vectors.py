@@ -33,11 +33,11 @@ for chunk in chunks:
         "values": chunk["embedding"],
 
         "metadata": {
-            "text": chunk["text"],
-            "page_number": chunk["page_number"],
-            "chunk_index": chunk["chunk_index"],
-            "chunking_method": chunk["chunking_method"]
-        }
+    "text": chunk["text"],
+    "chunk_index": chunk["chunk_index"],
+    "chunking_method": chunk["chunking_method"],
+    "section": chunk["section"]
+}
     }
 
     vectors.append(vector)
